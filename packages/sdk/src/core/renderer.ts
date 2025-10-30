@@ -97,11 +97,17 @@ export class ZPLRenderer {
   }
 
   private renderText(item: TextItem): void {
-    const { x, y, font, blockFormat, fieldHex } = item;
+    const { x, y, font, blockFormat, fieldHex, orientation } = item;
     let { data } = item;
     data = zebraEncode(data, fieldHex);
     const scaledX = this.scaleValue(x);
     const scaledY = this.scaleValue(y);
+
+    // Save context if rotation is needed
+    if (orientation && orientation !== 'N') {
+      this.ctx.save();
+      this.applyRotation(scaledX, scaledY, orientation);
+    }
 
     // Configure font
     const fontSize = this.scaleValue(font.height ?? 20);
@@ -137,6 +143,11 @@ export class ZPLRenderer {
       //this.ctx.scale(0.8, 1);
       this.ctx.fillText(data, scaledX, scaledY);
       //this.ctx.scale(1.2, 1);
+    }
+
+    // Restore context if rotation was applied
+    if (orientation && orientation !== 'N') {
+      this.ctx.restore();
     }
   }
 
@@ -185,6 +196,12 @@ export class ZPLRenderer {
       // Save the current context state
       this.ctx.save();
 
+      // Apply rotation if specified
+      const orientation = item.getOrientation();
+      if (orientation && orientation !== 'N') {
+        this.applyRotation(scaledX, scaledY, orientation);
+      }
+
       // Calculate the rendered barcode dimensions
       const renderedWidth = tempCanvas.width;
       const renderedHeight = tempCanvas.height;
@@ -223,6 +240,37 @@ export class ZPLRenderer {
     return value * this.options.scale;
   }
 
+  /**
+   * Apply rotation transformation around a point (field origin)
+   * @param x - The x coordinate of the rotation point
+   * @param y - The y coordinate of the rotation point
+   * @param orientation - The rotation orientation (N, R, I, or B)
+   */
+  private applyRotation(x: number, y: number, orientation: string): void {
+    // Translate to the rotation point
+    this.ctx.translate(x, y);
+
+    // Apply rotation based on orientation
+    switch(orientation) {
+      case 'R': // Rotate 90 degrees clockwise
+        this.ctx.rotate(Math.PI / 2);
+        break;
+      case 'I': // Inverted - 180 degrees
+        this.ctx.rotate(Math.PI);
+        break;
+      case 'B': // Bottom up - 90 degrees counter-clockwise
+        this.ctx.rotate(-Math.PI / 2);
+        break;
+      case 'N': // Normal - no rotation
+      default:
+        // No rotation needed
+        break;
+    }
+
+    // Translate back from rotation point
+    this.ctx.translate(-x, -y);
+  }
+
   private renderGraphicBox(item: GraphicBoxItem): void {
     const scaledX = this.scaleValue(item.x);
     const scaledY = this.scaleValue(item.y);
@@ -239,6 +287,11 @@ export class ZPLRenderer {
 
     // Save current canvas state
     this.ctx.save();
+
+    // Apply rotation if specified
+    if (item.orientation && item.orientation !== 'N') {
+      this.applyRotation(scaledX, scaledY, item.orientation);
+    }
 
     // Draw rounded rectangle path
     this.ctx.beginPath();

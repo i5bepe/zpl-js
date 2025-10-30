@@ -163,6 +163,7 @@ export class TextItem implements LayoutItem {
   y: number;
   fieldReversed?: boolean;
   fieldHex?: boolean;
+  orientation?: BarcodeOrientation;
   data: string;
   font: FontSettings;
   blockFormat?: TextBlockFormat;
@@ -174,7 +175,8 @@ export class TextItem implements LayoutItem {
     font: FontSettings,
     blockFormat?: TextBlockFormat,
     fieldReversed?: boolean,
-    fieldHex?: boolean
+    fieldHex?: boolean,
+    orientation?: BarcodeOrientation
   ) {
     this.x = x;
     this.y = y;
@@ -183,6 +185,7 @@ export class TextItem implements LayoutItem {
     this.blockFormat = blockFormat;
     this.fieldReversed = fieldReversed;
     this.fieldHex = fieldHex;
+    this.orientation = orientation;
   }
 }
 
@@ -196,15 +199,17 @@ export class GraphicBoxItem implements LayoutItem {
   x: number;
   y: number;
   fieldReversed?: boolean;
+  orientation?: BarcodeOrientation;
   width: number;
   height: number;
   thickness: number;
   color: "B" | "W";
   roundedness: number;
 
-  constructor(x: number, y: number) {
+  constructor(x: number, y: number, orientation?: BarcodeOrientation) {
     this.x = x;
     this.y = y;
+    this.orientation = orientation;
     this.width = 0;
     this.height = 0;
     this.thickness = 0;

@@ -25,6 +25,7 @@ export class ZPLParser {
   private isBarcodeMode = false;
   private isFieldReverseMode = false;
   private isFieldHexMode = false;
+  private currentFieldOrientation: "N" | "R" | "I" | "B" = "N";
   private barcodeType = "";
   private currentBarcodeOptions:
     | BarcodeCode39Options
@@ -377,10 +378,21 @@ export class ZPLParser {
           this.currentFont,
           this.currentBlockFormat,
           this.isFieldReverseMode,
-          this.isFieldHexMode
+          this.isFieldHexMode,
+          this.currentFieldOrientation
         )
       );
     } else {
+      // Apply ^FW field orientation to barcode if not explicitly set in barcode options
+      let barcodeOptions = this.currentBarcodeOptions;
+      if (this.currentFieldOrientation !== "N" && barcodeOptions) {
+        // Override barcode orientation with field orientation from ^FW
+        barcodeOptions = {
+          ...barcodeOptions,
+          orientation: this.currentFieldOrientation,
+        };
+      }
+
       // TODO: Pass current font to barcode for use in interpretation line
       this.label.items.push(
         new BarcodeItem(
@@ -388,7 +400,7 @@ export class ZPLParser {
           this.currentY,
           data,
           this.barcodeType,
-          this.currentBarcodeOptions,
+          barcodeOptions,
           this.label.barcodeDefaults,
           this.label,
           this.isFieldReverseMode,
@@ -421,9 +433,21 @@ export class ZPLParser {
     this.isFieldReverseMode = true;
   };
 
+  private handleFW = (paramString: string) => {
+    // ^FW command sets the field orientation/rotation
+    // Parameter: r = rotation value (N, R, I, or B)
+    // N = Normal (0 degrees), R = Rotate 90° CW, I = Inverted (180°), B = Bottom up (90° CCW)
+    const orientation = paramString.trim().toUpperCase();
+    if (orientation === "" || orientation === "N") {
+      this.currentFieldOrientation = "N";
+    } else {
+      this.currentFieldOrientation = this.validateOrientation(orientation);
+    }
+  };
+
   private handleGB = (paramString: string) => {
     const params = paramString.split(",");
-    const boxItem = new GraphicBoxItem(this.currentX, this.currentY);
+    const boxItem = new GraphicBoxItem(this.currentX, this.currentY, this.currentFieldOrientation);
 
     // Width
     if (params.length > 0 && params[0]) {
@@ -563,7 +587,7 @@ export class ZPLParser {
     "^FP": this.handleCommandNotImplemented,
     "^FT": this.handleCommandNotImplemented,
     "^FV": this.handleCommandNotImplemented,
-    "^FW": this.handleCommandNotImplemented,
+    "^FW": this.handleFW,
     "^FX": this.handleCommandNotImplemented,
     "^GC": this.handleCommandNotImplemented,
     "^GD": this.handleCommandNotImplemented,
