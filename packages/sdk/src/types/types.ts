@@ -251,6 +251,21 @@ export class ImageItem implements LayoutItem {
   }
 }
 
+export class CommandItem implements LayoutItem {
+  type = "Command";
+  x: number;
+  y: number;
+  command: string; // The command name like "^CF", "^BY", "^FW"
+  params: string;  // The parameters as a string
+
+  constructor(x: number, y: number, command: string, params: string) {
+    this.x = x;
+    this.y = y;
+    this.command = command;
+    this.params = params;
+  }
+}
+
 export class Printer {
   private _id: string;
   private _ip: string;

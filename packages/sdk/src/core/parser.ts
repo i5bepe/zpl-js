@@ -9,6 +9,7 @@ import {
   BarcodeDefaults,
   GraphicBoxItem,
   ImageItem,
+  CommandItem,
   BarcodeCode128Options,
   Variable,
 } from "../types/types";
@@ -347,6 +348,10 @@ export class ZPLParser {
 
   private handleBY = (paramString: string) => {
     this.label.barcodeDefaults = this.parseBYParameters(paramString);
+    // Also add as a command item for visibility in object list
+    this.label.items.push(
+      new CommandItem(this.currentX, this.currentY, "^BY", paramString)
+    );
   };
 
   private handleBZ = () => {
@@ -366,6 +371,11 @@ export class ZPLParser {
       height: params.length > 1 ? parseInt(params[1], 10) : undefined,
       width: params.length > 2 ? parseInt(params[2], 10) : undefined,
     };
+
+    // Also add as a command item for visibility in object list
+    this.label.items.push(
+      new CommandItem(this.currentX, this.currentY, "^CF", paramString)
+    );
   };
 
   private handleFD = (paramString: string) => {
@@ -444,6 +454,11 @@ export class ZPLParser {
     } else {
       this.currentFieldOrientation = this.validateOrientation(orientation);
     }
+
+    // Also add as a command item for visibility in object list
+    this.label.items.push(
+      new CommandItem(this.currentX, this.currentY, "^FW", paramString)
+    );
   };
 
   private handleGB = (paramString: string) => {
