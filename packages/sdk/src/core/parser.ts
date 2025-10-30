@@ -575,6 +575,11 @@ export class ZPLParser {
     } else {
       throw new Error("^LH command requires both x and y coordinates");
     }
+
+    // Add CommandItem for visibility in object list (like ^CF, ^BY, ^FW)
+    this.label.items.push(
+      new CommandItem(this.currentX, this.currentY, "^LH", paramString)
+    );
   };
 
   private handleNoOp() {}
