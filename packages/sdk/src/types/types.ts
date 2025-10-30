@@ -218,6 +218,39 @@ export class GraphicBoxItem implements LayoutItem {
   }
 }
 
+export class ImageItem implements LayoutItem {
+  type = "Image";
+  x: number;
+  y: number;
+  fieldReversed?: boolean;
+  orientation?: BarcodeOrientation;
+  width: number;
+  height: number;
+  totalBytes: number;
+  bytesPerRow: number;
+  data: string;
+
+  constructor(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    totalBytes: number,
+    bytesPerRow: number,
+    data: string,
+    orientation?: BarcodeOrientation
+  ) {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.totalBytes = totalBytes;
+    this.bytesPerRow = bytesPerRow;
+    this.data = data;
+    this.orientation = orientation;
+  }
+}
+
 export class Printer {
   private _id: string;
   private _ip: string;

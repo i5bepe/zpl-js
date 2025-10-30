@@ -76,6 +76,7 @@ type ZPLCommandKey =
   | "^GD"
   | "^GE"
   | "^GF"
+  | "^GFA"
   | "^GS"
   | "~HB"
   | "~HD"
@@ -890,6 +891,16 @@ export const ZPLCommands: Record<ZPLCommandKey, ZPLCommandValue> = {
     name: "Graphic Field",
     description:
       "Used to define and load a graphic image directly into the label format.",
+    format: "",
+    reference: {
+      "zpl-zbi2-pm-en": 0,
+    },
+  },
+  /** Graphic Field ASCII */
+  "^GFA": {
+    name: "Graphic Field ASCII",
+    description:
+      "Used to define and load a graphic image in ASCII format directly into the label format.",
     format: "",
     reference: {
       "zpl-zbi2-pm-en": 0,

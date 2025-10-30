@@ -1,4 +1,4 @@
-import { Label, TextItem, BarcodeItem, GraphicBoxItem } from "../types/types";
+import { Label, TextItem, BarcodeItem, GraphicBoxItem, ImageItem } from "../types/types";
 import { zebraEncode } from "./encoding";
 import type { RenderOptions } from "@bwip-js/browser";
 
@@ -89,6 +89,8 @@ export class ZPLRenderer {
         await this.renderBarcode(item as BarcodeItem, label);
       } else if (item.type === "GraphicBox") {
         this.renderGraphicBox(item as GraphicBoxItem);
+      } else if (item.type === "Image") {
+        this.renderImage(item as ImageItem);
       }
     }
 
@@ -347,5 +349,74 @@ export class ZPLRenderer {
 
     // Restore canvas state
     this.ctx.restore();
+  }
+
+  private renderImage(item: ImageItem): void {
+    const scaledX = this.scaleValue(item.x);
+    const scaledY = this.scaleValue(item.y);
+
+    // Decompress and decode the hex data
+    const bitmap = this.hexToBitmap(item.data);
+
+    // Create ImageData
+    const imageData = new ImageData(item.width, item.height);
+
+    // Convert bitmap to RGBA
+    for (let y = 0; y < item.height; y++) {
+      for (let x = 0; x < item.width; x++) {
+        const byteIndex = y * item.bytesPerRow + Math.floor(x / 8);
+        const bitIndex = 7 - (x % 8);
+
+        const isBlack = (bitmap[byteIndex] & (1 << bitIndex)) !== 0;
+
+        const pixelIndex = (y * item.width + x) * 4;
+        if (isBlack) {
+          imageData.data[pixelIndex] = 0;     // R
+          imageData.data[pixelIndex + 1] = 0; // G
+          imageData.data[pixelIndex + 2] = 0; // B
+          imageData.data[pixelIndex + 3] = 255; // A
+        } else {
+          imageData.data[pixelIndex] = 255;   // R
+          imageData.data[pixelIndex + 1] = 255; // G
+          imageData.data[pixelIndex + 2] = 255; // B
+          imageData.data[pixelIndex + 3] = 255; // A
+        }
+      }
+    }
+
+    // Create a temporary canvas to hold the image
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = item.width;
+    tempCanvas.height = item.height;
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCtx.putImageData(imageData, 0, 0);
+
+    // Save context and apply rotation if needed
+    if (item.orientation && item.orientation !== 'N') {
+      this.ctx.save();
+      this.applyRotation(scaledX, scaledY, item.orientation);
+    }
+
+    // Draw to target context with proper scaling
+    this.ctx.drawImage(
+      tempCanvas,
+      scaledX,
+      scaledY,
+      this.scaleValue(item.width),
+      this.scaleValue(item.height)
+    );
+
+    // Restore context if rotation was applied
+    if (item.orientation && item.orientation !== 'N') {
+      this.ctx.restore();
+    }
+  }
+
+  private hexToBitmap(hex: string): Uint8Array {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+      bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+    }
+    return bytes;
   }
 }

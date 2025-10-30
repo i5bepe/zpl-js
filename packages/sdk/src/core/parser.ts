@@ -8,6 +8,7 @@ import {
   BarcodeCode39Options,
   BarcodeDefaults,
   GraphicBoxItem,
+  ImageItem,
   BarcodeCode128Options,
   Variable,
 } from "../types/types";
@@ -507,6 +508,42 @@ export class ZPLParser {
     this.label.items.push(boxItem);
   };
 
+  private handleGF = (paramString: string) => {
+    // ^GF or ^GFA format: totalBytes,totalBytes,bytesPerRow,data
+    // The data part can be very long hex string
+    const params = paramString.split(",");
+
+    if (params.length < 4) {
+      throw new Error("^GF command requires at least 4 parameters");
+    }
+
+    const totalBytes = parseInt(params[0], 10);
+    const bytesPerRow = parseInt(params[2], 10);
+    const data = params.slice(3).join(","); // In case data contains commas
+
+    // Calculate dimensions
+    const width = bytesPerRow * 8; // Each byte represents 8 pixels
+    const height = Math.floor(totalBytes / bytesPerRow);
+
+    const imageItem = new ImageItem(
+      this.currentX,
+      this.currentY,
+      width,
+      height,
+      totalBytes,
+      bytesPerRow,
+      data,
+      this.currentFieldOrientation
+    );
+
+    if (this.isFieldReverseMode) {
+      imageItem.fieldReversed = true;
+      this.isFieldReverseMode = false;
+    }
+
+    this.label.items.push(imageItem);
+  };
+
   private handleLH = (paramString: string) => {
     const params = paramString.split(",");
     if (params.length >= 2) {
@@ -592,7 +629,8 @@ export class ZPLParser {
     "^GC": this.handleCommandNotImplemented,
     "^GD": this.handleCommandNotImplemented,
     "^GE": this.handleCommandNotImplemented,
-    "^GF": this.handleCommandNotImplemented,
+    "^GF": this.handleGF,
+    "^GFA": this.handleGF,
     "^GS": this.handleCommandNotImplemented,
     "^HF": this.handleCommandNotImplemented,
     "^HG": this.handleCommandNotImplemented,
