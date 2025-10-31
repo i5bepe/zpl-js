@@ -1,8 +1,11 @@
 /**
  * @fileoverview Zebra Printer Encoding Emulation
  * This script provides functions to emulate the character encoding behavior of Zebra barcode label printers,
- * specifically their handling of UTF-8 bytes and Code Page 850 interpretation.
+ * supporting multiple character sets via the ^CI command.
  */
+
+import { characterSetRegistry } from './charsets';
+import './charsets/init'; // Auto-initialize character sets
 
 /**
  * Creates a mapping object representing a Zebra printer's character set,
@@ -390,3 +393,47 @@ export function displayCharacterCodes(text: string) {
   }
   console.log(codes);
 }
+
+/**
+ * Encodes text using a specific character set (via ^CI command value)
+ * This is the new recommended encoding function that supports all character sets.
+ *
+ * @param text - The text to encode
+ * @param ciValue - The ^CI command value (0-36+) specifying which character set to use.
+ *                  If undefined, uses the default character set (CP850)
+ * @param isHexMode - Whether ^FH (Field Hexadecimal) mode is active
+ * @returns The encoded string suitable for ZPL rendering
+ * @throws {CharacterSetEncodeError} If a character cannot be encoded in the specified character set
+ *
+ * @example
+ * // Encode Swedish text using CP850 (^CI13)
+ * const encoded = zebraEncodeWithCharset("Hej åäö!", 13);
+ *
+ * @example
+ * // Encode using UTF-8 (^CI28)
+ * const encoded = zebraEncodeWithCharset("Hello 世界", 28);
+ *
+ * @example
+ * // Use default character set (CP850)
+ * const encoded = zebraEncodeWithCharset("Hello World");
+ */
+export function zebraEncodeWithCharset(
+  text: string,
+  ciValue?: number,
+  isHexMode = false
+): string {
+  const charset = ciValue !== undefined
+    ? characterSetRegistry.get(ciValue)
+    : characterSetRegistry.getDefault();
+
+  return charset.encode(text, isHexMode);
+}
+
+/**
+ * Re-export character set utilities for convenience
+ */
+export { ZPLCharacterSet, characterSetRegistry } from './charsets';
+export {
+  getImplementedCharacterSets,
+  getUnimplementedCharacterSets,
+} from './charsets/init';

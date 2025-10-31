@@ -14,6 +14,7 @@ import {
   Variable,
 } from "../types/types";
 import { ZPLCommands, ZPLCommand } from "../types/zpl-commands";
+import { characterSetRegistry } from "./charsets";
 
 export class ZPLParser {
   private label: Label;
@@ -28,6 +29,7 @@ export class ZPLParser {
   private isFieldReverseMode = false;
   private isFieldHexMode = false;
   private currentFieldOrientation: "N" | "R" | "I" | "B" = "N";
+  private currentCharacterSet = 0; // Default to USA1 (^CI0) per ZPL spec
   private barcodeType = "";
   private currentBarcodeOptions:
     | BarcodeCode39Options
@@ -390,7 +392,8 @@ export class ZPLParser {
           this.currentBlockFormat,
           this.isFieldReverseMode,
           this.isFieldHexMode,
-          this.currentFieldOrientation
+          this.currentFieldOrientation,
+          this.currentCharacterSet
         )
       );
     } else {
@@ -415,7 +418,8 @@ export class ZPLParser {
           this.label.barcodeDefaults,
           this.label,
           this.isFieldReverseMode,
-          this.isFieldHexMode
+          this.isFieldHexMode,
+          this.currentCharacterSet
         )
       );
       this.isBarcodeMode = false;
@@ -438,6 +442,27 @@ export class ZPLParser {
 
   private handleFH = () => {
     this.isFieldHexMode = true;
+  };
+
+  private handleCI = (paramString: string) => {
+    // ^CI command: Change International Font/Encoding
+    // Format: ^CIa,b,c,d where 'a' is the character set value (0-36+)
+    // We only use the first parameter 'a'
+    const params = paramString.split(",");
+    if (params.length > 0 && params[0]) {
+      const ciValue = parseInt(params[0], 10);
+      if (!isNaN(ciValue) && ciValue >= 0) {
+        this.currentCharacterSet = ciValue;
+      }
+    } else {
+      // ^CI with no parameters resets to default (USA1 = 0)
+      this.currentCharacterSet = 0;
+    }
+
+    // Also add as a command item for visibility in object list
+    this.label.items.push(
+      new CommandItem(this.currentX, this.currentY, "^CI", paramString)
+    );
   };
 
   private handleFR = () => {
@@ -630,7 +655,7 @@ export class ZPLParser {
     "^A@": this.handleCommandNotImplemented,
     "^CC": this.handleCommandNotImplemented,
     "^CD": this.handleCommandNotImplemented,
-    "^CI": this.handleCommandNotImplemented,
+    "^CI": this.handleCI,
     "^CM": this.handleCommandNotImplemented,
     "^CO": this.handleCommandNotImplemented,
     "^CT": this.handleCommandNotImplemented,
@@ -763,6 +788,9 @@ export class ZPLParser {
 
   public parse(): ParsedZPL {
     console.groupCollapsed("Parsing ZPL");
+    // Clear any previous warnings
+    characterSetRegistry.clearWarnings();
+
     this.result = {
       label: null,
       isValid: false,
@@ -806,9 +834,22 @@ export class ZPLParser {
       try {
         this.zplCommandHandlers[command](cleanParams);
       } catch (error) {
-        this.result.errors?.push(
-          `Error processing command ${command}: ${error}`
-        );
+        // Check if this is a "Command not implemented" error - treat as warning
+        const errorMessage = String(error);
+        if (errorMessage.includes("Command not implemented")) {
+          // Initialize warnings array if it doesn't exist
+          if (!this.result.warnings) {
+            this.result.warnings = [];
+          }
+          this.result.warnings.push(
+            `Command ${command} is not implemented and will be ignored.`
+          );
+        } else {
+          // Other errors are actual problems
+          this.result.errors?.push(
+            `Error processing command ${command}: ${error}`
+          );
+        }
       }
     }
 
@@ -820,6 +861,15 @@ export class ZPLParser {
 
     this.result.label = this.label;
     if (this.result.errors?.length === 0) this.result.isValid = true;
+
+    // Collect and merge warnings from character set registry
+    const charsetWarnings = characterSetRegistry.getWarnings();
+    if (!this.result.warnings) {
+      this.result.warnings = charsetWarnings;
+    } else if (charsetWarnings.length > 0) {
+      this.result.warnings.push(...charsetWarnings);
+    }
+
     console.groupEnd();
     return this.result;
   }

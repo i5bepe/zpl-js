@@ -1,5 +1,5 @@
 import { Label, TextItem, BarcodeItem, GraphicBoxItem, ImageItem } from "../types/types";
-import { zebraEncode } from "./encoding";
+import { zebraEncode, zebraEncodeWithCharset } from "./encoding";
 import type { RenderOptions } from "@bwip-js/browser";
 
 interface RendererOptions {
@@ -99,9 +99,9 @@ export class ZPLRenderer {
   }
 
   private renderText(item: TextItem): void {
-    const { x, y, font, blockFormat, fieldHex, orientation } = item;
+    const { x, y, font, blockFormat, fieldHex, orientation, characterSet } = item;
     let { data } = item;
-    data = zebraEncode(data, fieldHex);
+    data = zebraEncodeWithCharset(data, characterSet, fieldHex);
     const scaledX = this.scaleValue(x);
     const scaledY = this.scaleValue(y);
 
@@ -156,7 +156,7 @@ export class ZPLRenderer {
   private async renderBarcode(item: BarcodeItem, label: Label): Promise<void> {
     const scaledX = this.scaleValue(item.x);
     const scaledY = this.scaleValue(item.y);
-    const processedData = zebraEncode(item.getProcessedData(), item.fieldHex);
+    const processedData = zebraEncodeWithCharset(item.getProcessedData(), item.characterSet, item.fieldHex);
 
     // Create a temporary canvas for the barcode
     const tempCanvas = document.createElement("canvas");

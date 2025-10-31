@@ -20,6 +20,11 @@ export interface ParsedZPL {
   errors?: string[];
 
   /**
+   * Optional array of warning messages (non-fatal issues)
+   */
+  warnings?: string[];
+
+  /**
    * Variables to be merged into the final ZPL string
    */
   variables?: Map<string, Variable>;
@@ -81,6 +86,7 @@ export class BarcodeItem {
   readonly type = "Barcode";
   fieldReversed?: boolean;
   fieldHex?: boolean;
+  characterSet?: number; // ^CI command value (0-36+)
   private static defaultBarcodeSettings: BarcodeDefaults = {
     moduleWidth: 2,
     wideBarToNarrowRatio: 3.0,
@@ -98,11 +104,13 @@ export class BarcodeItem {
     public renderOptions?: BarcodeRenderOptions,
     label?: Label,
     fieldReversed?: boolean,
-    fieldHex?: boolean
+    fieldHex?: boolean,
+    characterSet?: number
   ) {
     this.label = label;
     this.fieldReversed = fieldReversed;
     this.fieldHex = fieldHex;
+    this.characterSet = characterSet;
   }
 
   public getRenderOptions(): BarcodeRenderOptions {
@@ -167,6 +175,7 @@ export class TextItem implements LayoutItem {
   data: string;
   font: FontSettings;
   blockFormat?: TextBlockFormat;
+  characterSet?: number; // ^CI command value (0-36+)
 
   constructor(
     x: number,
@@ -176,7 +185,8 @@ export class TextItem implements LayoutItem {
     blockFormat?: TextBlockFormat,
     fieldReversed?: boolean,
     fieldHex?: boolean,
-    orientation?: BarcodeOrientation
+    orientation?: BarcodeOrientation,
+    characterSet?: number
   ) {
     this.x = x;
     this.y = y;
@@ -186,6 +196,7 @@ export class TextItem implements LayoutItem {
     this.fieldReversed = fieldReversed;
     this.fieldHex = fieldHex;
     this.orientation = orientation;
+    this.characterSet = characterSet;
   }
 }
 
